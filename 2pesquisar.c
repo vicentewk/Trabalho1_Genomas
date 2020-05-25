@@ -5,7 +5,7 @@
 #include <omp.h>
 
 #define TAM 30690
-
+//teste commit
 int carrega_genoma();
 int mostra_genomas();
 int compara_genoma(char genomaa[TAM], char genomab[TAM]);
