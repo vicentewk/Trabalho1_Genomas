@@ -2,14 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include "tempo.h"
 #include <omp.h>
 
 #define TAM 30690
-//teste commit
+
 int carrega_genoma();
 int mostra_genomas();
-int compara_genoma(char genomaa[TAM], char genomab[TAM]);
-int exibe_resultado(int igual, int dif);
+int compara_genoma(char genomaa[TAM], char genomab[TAM], int w, int z);
 int compara_sequencia(char genomaa[TAM], char genomab[TAM]);
 void inicializa_vetor();
 
@@ -29,31 +29,43 @@ char genoma8[TAM];
 char genoma9[TAM];
 int count = 0;
 
-void main(void)
+void main(int argc, char *argv[])
 {
-
-    omp_set_num_threads(4);
-
-    wtime_start = omp_get_wtime();
+    tempo1();
+    //wtime_start = omp_get_wtime();
+    int i, j;
+    omp_set_num_threads(1);
+    /*
+#pragma omp parallel
+#pragma omp single
+    printf("Foram criadas %d threads omp\n",
+           omp_get_num_threads());
+           */
     inicializa_vetor();
     carrega_genoma();
     mostra_genomas();
 
     char *array_gen[10] = {genoma0, genoma1, genoma2, genoma3, genoma4, genoma5, genoma6, genoma7, genoma8, genoma9};
 
-    for (int i = 0; i < 9; i++)
+    //  #pragma omp parallel for collapse(2) private(i, j) schedule(static, 1)
+#pragma omp parallel for private(i)
+    for (i = 0; i < 9; i++)
     {
-        for (int j = i + 1; j <= 9; j++)
+#pragma omp parallel for private(j)
+        for (j = i + 1; j <= 9; j++)
         {
-            printf("\n \n Comparação e sequencia do genoma %d e do genoma %d ", i, j);
-            compara_genoma(array_gen[i], array_gen[j]);
+            compara_genoma(array_gen[i], array_gen[j], i, j);
             compara_sequencia(array_gen[i], array_gen[j]);
         }
     }
 
-    wtime_end = omp_get_wtime();
+    tempo2();
+    tempoFinal("mili segundos", argv[0], MSGLOG);
+
+    /* wtime_end = omp_get_wtime();
     wtime = wtime_end - wtime_start;
     printf("\n \n O tempo total da execução foi: %f  \n \n", wtime);
+*/
 }
 //funcao carrega genomas
 //===============================================================
@@ -257,29 +269,30 @@ int carrega_genoma()
 
 //funcao compara
 //===============================================================
-int compara_genoma(char genomaa[TAM], char genomab[TAM])
+int compara_genoma(char genomaa[TAM], char genomab[TAM], int w, int z)
 {
     int i = 0,
         x = 0;
     igual = 0;
     dif = 0;
 
-    //#pragma omp parallel for private(i) reduction(+  : igual, dif)
     for (i = 0; i < TAM; i++)
     {
         if (genomaa[i] == '0' && genomab[i] == '0')
         {
-            break;
+            // break;
         }
         else
         {
 
             if (genomaa[i] == genomab[i])
             { //compara os dois nucleotideos
+
                 igual++;
             }
             else
             {
+
                 dif++;
                 //scanf("%d", &x);
                 // sleep(1);
@@ -287,9 +300,11 @@ int compara_genoma(char genomaa[TAM], char genomab[TAM])
         }
     }
     count++;
+    printf("\n \n Comparação e sequencia do genoma %d e do genoma %d ", w, z);
     printf("\n Comparação número: %d ", count);
-    //printf("\n \n Resultado da comparação do Genoma 1 e 2");
-    exibe_resultado(igual, dif);
+    //exibe o resultado
+    printf("\n\n | Iguais %-18d \n | Diferentes %-18d ", igual, dif);
+    printf("\n\n");
 }
 //mostra os genomas
 //==============================
@@ -306,17 +321,7 @@ int mostra_genomas()
     }
 }
 
-//exibe resultado
-//===============================================================
-int exibe_resultado(int igual, int dif)
-{
-
-    printf("\n\n | Iguais %-18d \n | Diferentes %-18d ", igual, dif);
-
-    printf("\n\n");
-}
-
-//funcao compara sequancia
+//funcao compara sequencia
 //===============================================================
 int compara_sequencia(char genomaa[TAM], char genomab[TAM])
 {
@@ -331,7 +336,7 @@ int compara_sequencia(char genomaa[TAM], char genomab[TAM])
     {
         if (genomaa[i] == '0' && genomab[j] == '0')
         {
-            break;
+            //break;
         }
         else
         {
