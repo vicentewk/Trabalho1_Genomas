@@ -2,17 +2,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "tempo.h"
 #include <omp.h>
 
 #define TAM 30690
-
+#define L 10
+#define C 10
 int carrega_genoma();
 int mostra_genomas();
 int compara_genoma(char genomaa[TAM], char genomab[TAM], int w, int z);
-int compara_sequencia(char genomaa[TAM], char genomab[TAM]);
+int compara_sequencia(char genomaa[TAM], char genomab[TAM], int w, int z);
 void inicializa_vetor();
-
+void inicializa_matriz();
+void mostra_resultado();
+int m1[C][L];
 double wtime_start;
 double wtime_end;
 double wtime;
@@ -29,43 +31,49 @@ char genoma8[TAM];
 char genoma9[TAM];
 int count = 0;
 
+int maior_sequencia = 0;
+int ms_g1, ms_g2;
+int t = 0;
 void main(int argc, char *argv[])
 {
-    tempo1();
-    //wtime_start = omp_get_wtime();
+    //omp_set_num_threads(30);
+    printf("Digite o número de threads que deseja utilizar: ");
+    scanf("%d", &t);
+    wtime_start = omp_get_wtime();
     int i, j;
-    omp_set_num_threads(1);
-    /*
+
 #pragma omp parallel
 #pragma omp single
-    printf("Foram criadas %d threads omp\n",
-           omp_get_num_threads());
-           */
+    printf("Foram criadas %d threads omp\n", omp_get_num_threads());
+#pragma omp parallel
+    printf("Thread %d criada \n", omp_get_thread_num());
+
+#pragma omp single
     inicializa_vetor();
+    inicializa_matriz;
     carrega_genoma();
     mostra_genomas();
 
     char *array_gen[10] = {genoma0, genoma1, genoma2, genoma3, genoma4, genoma5, genoma6, genoma7, genoma8, genoma9};
 
-    //  #pragma omp parallel for collapse(2) private(i, j) schedule(static, 1)
-#pragma omp parallel for private(i)
+#pragma omp parallel for collapse(1) private(i, j) schedule(dynamic, 1)
     for (i = 0; i < 9; i++)
-    {
-#pragma omp parallel for private(j)
         for (j = i + 1; j <= 9; j++)
         {
+            //printf("\n");
+            //printf("Comparação executada na thread  %d \n", omp_get_thread_num());
             compara_genoma(array_gen[i], array_gen[j], i, j);
-            compara_sequencia(array_gen[i], array_gen[j]);
+            compara_sequencia(array_gen[i], array_gen[j], i, j);
         }
-    }
 
-    tempo2();
-    tempoFinal("mili segundos", argv[0], MSGLOG);
+#pragma omp single
+    mostra_resultado();
+    //printf("\n");
+    printf("A maior sequencia  entre os genomas tem: %d caracteres e está presente na comparação entre os genomas %d e %d.", maior_sequencia, ms_g1, ms_g2);
 
-    /* wtime_end = omp_get_wtime();
+    wtime_end = omp_get_wtime();
     wtime = wtime_end - wtime_start;
     printf("\n \n O tempo total da execução foi: %f  \n \n", wtime);
-*/
 }
 //funcao carrega genomas
 //===============================================================
@@ -271,9 +279,10 @@ int carrega_genoma()
 //===============================================================
 int compara_genoma(char genomaa[TAM], char genomab[TAM], int w, int z)
 {
+
     int i = 0,
-        x = 0;
-    igual = 0;
+
+        igual = 0;
     dif = 0;
 
     for (i = 0; i < TAM; i++)
@@ -294,18 +303,21 @@ int compara_genoma(char genomaa[TAM], char genomab[TAM], int w, int z)
             {
 
                 dif++;
-                //scanf("%d", &x);
-                // sleep(1);
             }
         }
     }
     count++;
-    printf("\n \n Comparação e sequencia do genoma %d e do genoma %d ", w, z);
-    printf("\n Comparação número: %d ", count);
+
+    m1[z][w] = igual;
+    //printf("\n \n");
+    // printf(" Comparação e sequencia do genoma %d e do genoma %d ", w, z);
+    // printf("\n Comparação número: %d ", count);
     //exibe o resultado
-    printf("\n\n | Iguais %-18d \n | Diferentes %-18d ", igual, dif);
-    printf("\n\n");
+    // printf("\n\n | Iguais %-18d \n | Diferentes %-18d ", igual, dif);
+    // printf("\n\n");
+    //printf("_______________________________________________________________________________");
 }
+
 //mostra os genomas
 //==============================
 int mostra_genomas()
@@ -323,20 +335,19 @@ int mostra_genomas()
 
 //funcao compara sequencia
 //===============================================================
-int compara_sequencia(char genomaa[TAM], char genomab[TAM])
+int compara_sequencia(char genomaa[TAM], char genomab[TAM], int w, int z)
 {
 
     int i = 0,
         j = 0,
         igual = 0,
-        inicio = 0,
         qtde = 0;
 
     for (i = 0, j = 0; i < TAM; i++, j++)
     {
         if (genomaa[i] == '0' && genomab[j] == '0')
         {
-            //break;
+            break;
         }
         else
         {
@@ -351,15 +362,19 @@ int compara_sequencia(char genomaa[TAM], char genomab[TAM])
                 {
 
                     qtde = igual;
-                    inicio = i - qtde;
-                    igual = 0;
+                    if (qtde > maior_sequencia)
+                    {
+                        maior_sequencia = qtde;
+                        ms_g1 = w;
+                        ms_g2 = z;
+                    }
 
-                    printf("\n i = %-8d | inicio = %-8d | qtde = %-8d | ", i, inicio, qtde);
+                    igual = 0;
                 }
             }
         }
     }
-    printf("\n\n");
+    //printf("\n\n");
 }
 
 void inicializa_vetor()
@@ -377,4 +392,38 @@ void inicializa_vetor()
         genoma8[i] = '0';
         genoma9[i] = '0';
     }
+}
+
+void inicializa_matriz()
+{
+    int z, v;
+    printf("\n inicializando matrizes ...\n");
+    for (z = 0; z < L; z++)
+        for (v = 0; v < C; v++)
+        {
+            m1[z][v] = 0;
+        }
+}
+
+void mostra_resultado()
+{
+    int z, v;
+    printf("\n");
+    printf("\n  RESULTADO COMPARAÇÃO DE GENOMAS\n\n");
+    for (v = 0; v < C; v++)
+    {
+        printf("   %d   ", v);
+    }
+    printf("\n");
+    for (z = 0; z < L; z++)
+    {
+        printf("%d", z);
+        for (v = 0; v < C; v++)
+        {
+
+            printf("  %5.2d", m1[z][v]);
+        }
+        printf("\n");
+    }
+    printf("\n\n\n");
 }
